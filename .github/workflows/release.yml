@@ -3,7 +3,7 @@ name: Build & Release
 on:
   push:
     tags:
-      - 'v*'  # Trigger on version tags like v1.0.0
+      - 'v*'
   release:
     types: [created, edited, published]
 
@@ -11,8 +11,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # Needed to upload release assets
-      packages: write # Needed to publish to GitHub Packages (optional)
+      contents: write
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -36,4 +36,4 @@ jobs:
       - name: Build and publish Electron apps
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: npx electron-builder --publish=always --win --linux --mac
+        run: npx electron-builder --publish=always --win --linux
