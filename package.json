@@ -27,6 +27,7 @@
     "files": [
       "dist/**/*",
       "server/**/*",
+      "electron/**/*",
       "node_modules/**/*",
       "package.json"
     ],
@@ -61,7 +62,8 @@
         }
       ],
       "category": "Utility",
-      "icon": "build/icons"
+      "icon": "build/icons",
+      "maintainer": "Mobile Terminal <dev@mobileterminal.com>"
     },
     "deb": {
       "depends": [
