@@ -163,21 +163,32 @@ app.post('/api/tunnel/start', async (req, res) => {
   }
   tunnelActive = true
   tunnelPin = generatePin()
-  const currentPort = server.address()?.port || PORT
+
+  // Determine which port to expose via tunnel:
+  // Allow explicit override via TUNNEL_TARGET_PORT.
+  // - In production (NODE_ENV=production): Express serves frontend+backend on same port.
+  // - In development: Vite dev server (default 5173) serves frontend and proxies API to Express (port 5151).
+  const isProduction = process.env.NODE_ENV === 'production'
+  const targetPort = process.env.TUNNEL_TARGET_PORT ||
+    (isProduction ? (server.address()?.port || PORT) : (process.env.FRONTEND_PORT || 5173))
+
   try {
-    tunnelProcess = spawn(process.env.CLOUDFARED || path.join(process.env.HOME || '/home/' + process.env.USER, '.cloudflared', 'cloudflared'), ['tunnel', '--url', `http://localhost:${currentPort}`], {
+    tunnelProcess = spawn(process.env.CLOUDFARED || path.join(process.env.HOME || '/home/' + process.env.USER, '.cloudflared', 'cloudflared'), ['tunnel', '--url', `http://localhost:${targetPort}`], {
       stdio: ['ignore', 'pipe', 'pipe'],
     })
 
     let url = null
-    const urlPattern = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/
+    // Flexible URL pattern to match various Cloudflare domain formats
+    const urlPattern = /https?:\/\/[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}/g
 
     const onData = (chunk) => {
       if (url || res.headersSent) return
       const text = chunk.toString()
-      const match = text.match(urlPattern)
-      if (match) {
-        url = match[0]
+      const matches = text.match(urlPattern)
+      if (matches && matches.length > 0) {
+        // Prefer Cloudflare-specific domains, otherwise take first
+        const cloudflareUrl = matches.find(m => /cloudflare|trycloudflare\.com|cloudflareworkers\.com|workers\.dev/.test(m)) || matches[0]
+        url = cloudflareUrl
         tunnelUrl = url
         res.json({ url, pin: tunnelPin })
       }
@@ -189,8 +200,8 @@ app.post('/api/tunnel/start', async (req, res) => {
     tunnelProcess.on('exit', () => { tunnelProcess = null })
 
     setTimeout(() => {
-      if (!url && !res.headersSent) res.json({ error: 'Timeout waiting for tunnel URL' })
-    }, 15000)
+      if (!url && !res.headersSent) res.json({ error: 'Timeout waiting for tunnel URL. Make sure cloudflared is installed and the target port is accessible.' })
+    }, 30000) // 30s timeout for slower networks
   } catch (err) {
     res.json({ error: err.message })
   }

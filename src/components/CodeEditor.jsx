@@ -89,6 +89,19 @@ export default function CodeEditor({ filePath, onClose }) {
               value={content}
               onChange={(val) => { setContent(val); setModified(true); }}
               theme="vs-dark"
+              onMount={(editor) => {
+                // Add id/name to Monaco's hidden textarea to satisfy autofill warnings
+                const container = editor.getDomNode()
+                if (container) {
+                  const textarea = container.querySelector('textarea')
+                  if (textarea && !textarea.id) {
+                    const safePath = filePath?.replace(/[^a-zA-Z0-9]/g, '-') || 'editor'
+                    const taId = `monaco-textarea-${safePath}`
+                    textarea.id = taId
+                    textarea.name = taId
+                  }
+                }
+              }}
               options={{
                 minimap: { enabled: false },
                 fontSize: 14,

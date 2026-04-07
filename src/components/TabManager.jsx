@@ -54,7 +54,10 @@ export default function TabManager({ tabs, activeTab, onSwitchTab, onNewTab, onC
         >
           {editingId === tab.id ? (
             <div className="tab-edit-container">
+              <label htmlFor={`rename-tab-${tab.id}`} className="sr-only">Tab name</label>
               <input
+                id={`rename-tab-${tab.id}`}
+                name={`rename-tab-${tab.id}`}
                 className="tab-rename-input"
                 value={editValue}
                 onChange={e => setEditValue(e.target.value)}
