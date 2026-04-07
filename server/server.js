@@ -466,17 +466,22 @@ io.on('connection', (socket) => {
   console.log('Client connected:', socket.id)
   const socketSessions = new Set()
 
-  // Create a PTY session for a tab
-  socket.on('create-tab', ({ sessionId, cwd }) => {
-    const session = createSession(sessionId, socket, cwd)
-    if (session) {
-      socketSessions.add(sessionId)
-      socket.emit('session-ready', { sessionId, cwd: session.cwd })
-    }
-  })
+   // Create a PTY session for a tab
+   socket.on('create-tab', ({ sessionId, cwd }) => {
+     const session = createSession(sessionId, socket, cwd)
+     if (session) {
+       socketSessions.add(sessionId)
+       socket.emit('session-ready', { sessionId, cwd: session.cwd })
+     }
+   })
 
-  // Route input to correct PTY session
-  socket.on('data', ({ sessionId, data }) => {
+   // Ping handler for latency measurement
+   socket.on('ping', (callback) => {
+     callback()
+   })
+
+   // Route input to correct PTY session
+   socket.on('data', ({ sessionId, data }) => {
     const session = getSession(sessionId)
     if (session?.pty) session.pty.write(data)
   })

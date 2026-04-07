@@ -5,6 +5,7 @@ import Terminal from './components/Terminal'
 import SplitTerminal from './components/SplitTerminal'
 import SettingsPanel, { THEMES } from './components/SettingsPanel'
 import CodeEditor from './components/CodeEditor'
+import NetworkStatus from './components/NetworkStatus'
 import { Settings, PanelLeftClose, PanelLeftOpen, Split } from 'lucide-react'
 import { useSocket } from './hooks/useSocket'
 
@@ -54,7 +55,7 @@ export default function App() {
   const [theme, setTheme] = useState('dark')
   const [tabStatuses, setTabStatuses] = useState({})
   const [editorFile, setEditorFile] = useState(null)
-  const { connected } = useSocket('/')
+  const { connected, latency, reconnectCount } = useSocket('/')
 
   useEffect(() => {
     saveSession(tabs, activeTab, explorerOpen, currentPath)
@@ -118,25 +119,26 @@ export default function App() {
             tabStatuses={tabStatuses}
           />
         </div>
-        <div className="actions">
-          <button
-            className="icon-btn"
-            onClick={() => setSplitMode(v => !v)}
-            title={splitMode ? 'Single terminal' : 'Split view'}
-          >
-            <Split size={18} />
-          </button>
-          <button
-            className="icon-btn"
-            onClick={() => setExplorerOpen(v => !v)}
-            title={explorerOpen ? 'Hide file explorer' : 'Show file explorer'}
-          >
-            {explorerOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
-          </button>
-          <button className="icon-btn" onClick={() => setSettingsOpen(true)} title="Settings">
-            <Settings size={18} />
-          </button>
-        </div>
+         <div className="actions">
+           <NetworkStatus connected={connected} latency={latency} reconnectCount={reconnectCount} />
+           <button
+             className="icon-btn"
+             onClick={() => setSplitMode(v => !v)}
+             title={splitMode ? 'Single terminal' : 'Split view'}
+           >
+             <Split size={18} />
+           </button>
+           <button
+             className="icon-btn"
+             onClick={() => setExplorerOpen(v => !v)}
+             title={explorerOpen ? 'Hide file explorer' : 'Show file explorer'}
+           >
+             {explorerOpen ? <PanelLeftClose size={18} /> : <PanelLeftOpen size={18} />}
+           </button>
+           <button className="icon-btn" onClick={() => setSettingsOpen(true)} title="Settings">
+             <Settings size={18} />
+           </button>
+         </div>
       </div>
 
       <div className="main-content">

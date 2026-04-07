@@ -190,6 +190,48 @@ html, body, #root {
 }
 .icon-btn-sm:hover { background: var(--bg-tertiary); color: var(--text-primary); }
 
+/* Network Status Indicator */
+.network-status {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+}
+
+.network-status.disconnected {
+  color: #EF4444;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.network-status .latency {
+  font-family: 'Fira Code', monospace;
+  font-size: 11px;
+}
+
+.network-status .reconnect-badge {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  color: #F59E0B;
+  font-size: 10px;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+/* Status variants */
+.network-status.excellent { border-left: 3px solid #22C55E; }
+.network-status.good { border-left: 3px solid #EAB308; }
+.network-status.poor,
+.network-status.very-poor { border-left: 3px solid #EF4444; }
+
 /* ── Main Content ─────────────────────────────────────── */
 .main-content {
   display: flex;
