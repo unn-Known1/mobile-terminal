@@ -695,3 +695,82 @@ kbd {
 
 .setting-item label { display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 13px; }
 .setting-item input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--accent); }
+
+/* ── Split Terminal ─────────────────────────────────────── */
+.split-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+}
+
+.split-container.horizontal {
+  flex-direction: row;
+}
+
+.split-toolbar {
+  display: flex;
+  gap: 8px;
+  padding: 8px;
+  background: #1E293B;
+  border-bottom: 1px solid #334155;
+}
+
+.split-toolbar button {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 8px;
+  font-size: 12px;
+  background: #334155;
+  border: none;
+  border-radius: 4px;
+  color: #F8FAFC;
+  cursor: pointer;
+}
+
+.split-toolbar button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.split-panes {
+  display: flex;
+  flex: 1;
+  gap: 2px;
+}
+
+.split-container.horizontal .split-panes {
+  flex-direction: row;
+}
+
+.split-container.vertical .split-panes {
+  flex-direction: column;
+}
+
+.split-pane {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: #0F172A;
+  border: 1px solid #334155;
+  min-width: 200px;
+  min-height: 100px;
+}
+
+.split-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 4px 8px;
+  background: #1E293B;
+  font-size: 12px;
+}
+
+.close-split {
+  background: none;
+  border: none;
+  color: #94A3B8;
+  cursor: pointer;
+  padding: 2px;
+}

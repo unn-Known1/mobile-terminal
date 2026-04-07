@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react'
 import TabManager from './components/TabManager'
 import FileExplorer from './components/FileExplorer'
 import Terminal from './components/Terminal'
+import SplitTerminal from './components/SplitTerminal'
 import SettingsPanel, { THEMES } from './components/SettingsPanel'
-import { Settings, PanelLeftClose, PanelLeftOpen } from 'lucide-react'
+import { Settings, PanelLeftClose, PanelLeftOpen, Split } from 'lucide-react'
 import { useSocket } from './hooks/useSocket'
 
 function loadSession() {
@@ -47,6 +48,7 @@ export default function App() {
   const [explorerOpen, setExplorerOpen] = useState(initial.explorerOpen)
   const [currentPath, setCurrentPath] = useState(initial.currentPath)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [splitMode, setSplitMode] = useState(false)
   const [fontSize, setFontSize] = useState(14)
   const [theme, setTheme] = useState('dark')
   const [tabStatuses, setTabStatuses] = useState({})
@@ -117,6 +119,13 @@ export default function App() {
         <div className="actions">
           <button
             className="icon-btn"
+            onClick={() => setSplitMode(v => !v)}
+            title={splitMode ? 'Single terminal' : 'Split view'}
+          >
+            <Split size={18} />
+          </button>
+          <button
+            className="icon-btn"
             onClick={() => setExplorerOpen(v => !v)}
             title={explorerOpen ? 'Hide file explorer' : 'Show file explorer'}
           >
@@ -136,20 +145,31 @@ export default function App() {
           onOpenTerminal={handleOpenTerminal}
         />
         <div className={`terminal-area ${explorerOpen ? 'with-explorer' : ''}`}>
-          {tabs.map(tab => (
-            <div
-              key={tab.id}
-              style={{ display: tab.id === activeTab ? 'contents' : 'none' }}
-            >
-              <Terminal
-                sessionId={tab.id}
-                cwd={tab.cwd}
-                fontSize={fontSize}
-                theme={THEMES[theme]}
-                onStatusChange={updateTabStatus}
-              />
-            </div>
-          ))}
+          {splitMode ? (
+            <SplitTerminal
+              tabs={tabs}
+              activeTab={activeTab}
+              fontSize={fontSize}
+              theme={THEMES[theme]}
+              tabStatuses={tabStatuses}
+              onStatusChange={updateTabStatus}
+            />
+          ) : (
+            tabs.map(tab => (
+              <div
+                key={tab.id}
+                style={{ display: tab.id === activeTab ? 'contents' : 'none' }}
+              >
+                <Terminal
+                  sessionId={tab.id}
+                  cwd={tab.cwd}
+                  fontSize={fontSize}
+                  theme={THEMES[theme]}
+                  onStatusChange={updateTabStatus}
+                />
+              </div>
+            ))
+          )}
         </div>
       </div>
 
