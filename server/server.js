@@ -207,51 +207,38 @@ app.post('/api/tunnel/start', async (req, res) => {
     }
 
     // Simple URL extraction: find any trycloudflare.com URL
-     const extractUrl = (text) => {
-       const match = text.match(/https?:\/\/[a-zA-Z0-9][a-zA-Z0-9.-]*\.trycloudflare\.com\/?/i)
-       return match ? match[0].replace(/\/$/, '') : null
-     }
+    const extractUrl = (text) => {
+      const match = text.match(/https?:\/\/[a-zA-Z0-9][a-zA-Z0-9.-]*\.trycloudflare\.com\/?/i)
+      return match ? match[0].replace(/\/$/, '') : null
+    }
 
-     let ready = false
+    // On each data chunk, try to extract and send URL
+    const maybeSendUrl = () => {
+      if (url || res.headersSent) return
+      const foundUrl = extractUrl(fullOutput)
+      if (foundUrl) {
+        console.log('[TUNNEL] URL found in output:', foundUrl)
+        // Wait 3 seconds for tunnel to establish before sending response
+        setTimeout(() => {
+          if (!res.headersSent) {
+            console.log('[TUNNEL] Sending response to client')
+            url = foundUrl
+            tunnelUrl = url
+            res.json({ url, pin: tunnelPin })
+          }
+        }, 3000)
+      }
+    }
 
-     const trySendUrl = () => {
-       if (url || res.headersSent) return
+    const onData = (chunk) => {
+      logOutput(chunk, 'stdout')
+      maybeSendUrl()
+    }
 
-       const foundUrl = extractUrl(fullOutput)
-       if (foundUrl && ready) {
-         // Both URL and ready signal received
-         console.log('[TUNNEL] Tunnel ready with URL:', foundUrl)
-         url = foundUrl
-         tunnelUrl = url
-         res.json({ url, pin: tunnelPin })
-       }
-     }
-
-     const checkReady = () => {
-       if (ready || url || res.headersSent) return
-       // Look for "Registered tunnel connection" or similar
-       if (fullOutput.includes('Registered tunnel connection') || 
-           fullOutput.includes('Tunnel connection established') ||
-           /INF.*connection=/.test(fullOutput)) {
-         console.log('[TUNNEL] Tunnel ready signal detected')
-         ready = true
-         trySendUrl()
-       }
-     }
-
-     const onData = (chunk) => {
-       logOutput(chunk, 'stdout')
-       const prevHasUrl = !!extractUrl(fullOutput)
-       checkReady()
-       if (!prevHasUrl) trySendUrl() // check URL on stdout
-     }
-
-     const onErr = (chunk) => {
-       logOutput(chunk, 'stderr')
-       const prevHasUrl = !!extractUrl(fullOutput)
-       checkReady()
-       if (!prevHasUrl) trySendUrl() // check URL on stderr
-     }
+    const onErr = (chunk) => {
+      logOutput(chunk, 'stderr')
+      maybeSendUrl()
+    }
 
     tunnelProcess.stdout.on('data', onData)
     tunnelProcess.stderr.on('data', onErr)
