@@ -5,3 +5,8 @@ dist/
 .env
 build/
 release/
+.minimax/
+.planning/
+.code-review-graph/
+uploads/
+docs/
