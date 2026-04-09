@@ -1,4 +1,4 @@
-# Mobile Terminal PWA
+# Mobile Terminal
 
 A full-featured, production-grade terminal accessible from mobile browsers and desktop. Built with React, xterm.js, and node-pty for real PTY emulation. Installable as a PWA or use the Electron desktop app.
 
