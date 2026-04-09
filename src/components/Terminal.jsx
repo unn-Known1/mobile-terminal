@@ -13,6 +13,7 @@ export default function Terminal({ sessionId, cwd = null, fontSize = 14, theme, 
   const containerRef = useRef(null)
   const termRef = useRef(null)
   const fitAddonRef = useRef(null)
+  const scrollContainerRef = useRef(null)
   const [lastActivity, setLastActivity] = useState(Date.now())
   const { socket, connected } = useSocket('/')
   const { addToHistory, getPrevious, getNext } = useCommandHistory(sessionId)
@@ -90,21 +91,17 @@ export default function Terminal({ sessionId, cwd = null, fontSize = 14, theme, 
 
       // Sync scroll position with xterm's internal scroll
       const syncScroll = () => {
-        if (!containerRef.current || !scrollContainerRef.current) return
-        const terminal = containerRef.current.querySelector('.xterm')
-        if (terminal) {
-          const scrollTop = terminal.scrollTop
-          const scrollHeight = terminal.scrollHeight
-          const clientHeight = terminal.clientHeight
-          const atBottom = scrollHeight - scrollTop - clientHeight < 50
-          setIsAtBottom(atBottom)
-          
-          // Show scroll hint when scrolled up
-          if (scrollTop > 100) {
-            setShowScrollHint(true)
-          } else {
-            setShowScrollHint(false)
-          }
+        if (!scrollContainerRef.current) return
+        const scrollEl = scrollContainerRef.current
+        const { scrollTop, scrollHeight, clientHeight } = scrollEl
+        const atBottom = scrollHeight - scrollTop - clientHeight < 50
+        setIsAtBottom(atBottom)
+        
+        // Show scroll hint when scrolled up
+        if (scrollTop > 100) {
+          setShowScrollHint(true)
+        } else {
+          setShowScrollHint(false)
         }
       }
 
@@ -343,38 +340,40 @@ export default function Terminal({ sessionId, cwd = null, fontSize = 14, theme, 
 
   // Scroll to bottom function
   const scrollToBottom = useCallback(() => {
-    const terminal = containerRef.current?.querySelector('.xterm')
-    if (terminal) {
-      terminal.scrollTo({ top: terminal.scrollHeight, behavior: 'smooth' })
+    if (scrollContainerRef.current) {
+      scrollContainerRef.current.scrollTo({ top: scrollContainerRef.current.scrollHeight, behavior: 'smooth' })
     }
   }, [])
 
   // Handle scroll events on the terminal
   useEffect(() => {
-    const viewport = containerRef.current?.querySelector('.xterm-viewport')
-    if (!viewport) return
+    if (!scrollContainerRef.current) return
+
+    const scrollEl = scrollContainerRef.current
 
     const handleScroll = () => {
-      const { scrollTop, scrollHeight, clientHeight } = viewport
+      const { scrollTop, scrollHeight, clientHeight } = scrollEl
       const atBottom = scrollHeight - scrollTop - clientHeight < 50
       setIsAtBottom(atBottom)
       
       // Toggle scrolled class for visual indicator
       if (scrollTop > 50) {
-        viewport.classList.add('scrolled')
+        scrollEl.classList.add('scrolled')
       } else {
-        viewport.classList.remove('scrolled')
+        scrollEl.classList.remove('scrolled')
       }
     }
 
-    viewport.addEventListener('scroll', handleScroll, { passive: true })
+    scrollEl.addEventListener('scroll', handleScroll, { passive: true })
     
     // Initial scroll to bottom
     setTimeout(() => {
-      viewport.scrollTop = viewport.scrollHeight
+      if (scrollEl) {
+        scrollEl.scrollTop = scrollEl.scrollHeight
+      }
     }, 100)
 
-    return () => viewport.removeEventListener('scroll', handleScroll)
+    return () => scrollEl.removeEventListener('scroll', handleScroll)
   }, [connected])
 
   return (
@@ -388,9 +387,8 @@ export default function Terminal({ sessionId, cwd = null, fontSize = 14, theme, 
         ref={scrollContainerRef} 
         className="terminal-scroll-container"
         onScroll={() => {
-          const terminal = containerRef.current?.querySelector('.xterm')
-          if (terminal) {
-            const { scrollTop, scrollHeight, clientHeight } = terminal
+          if (scrollContainerRef.current) {
+            const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current
             setIsAtBottom(scrollHeight - scrollTop - clientHeight < 50)
           }
         }}
