@@ -295,21 +295,22 @@ export default function Terminal({ sessionId, cwd = null, fontSize = 14, theme, 
 
   // Clipboard operations for context menu
   const handleCopy = useCallback(() => {
-    if (contextMenu?.selection) {
-      navigator.clipboard.writeText(contextMenu.selection)
+    const selection = termRef.current?.getSelection()
+    if (selection) {
+      navigator.clipboard.writeText(selection).catch(console.error)
       termRef.current?.clearSelection()
     }
     setContextMenu(null)
-  }, [contextMenu])
+  }, [])
 
   const handlePaste = useCallback(async () => {
     try {
       const text = await navigator.clipboard.readText()
-      if (socket && text) {
+      if (socket && termRef.current && text) {
         socket.emit('data', { sessionId, data: text, seq: seqRef.current++ })
       }
     } catch (err) {
-      console.error('Failed to paste:', err)
+      console.error('Paste failed:', err)
     }
     setContextMenu(null)
   }, [socket, sessionId])
@@ -317,8 +318,9 @@ export default function Terminal({ sessionId, cwd = null, fontSize = 14, theme, 
   // Listen for paste events from app toolbar button
   useEffect(() => {
     const handlePasteEvent = (e) => {
-      if (socket && e.detail?.text) {
-        socket.emit('data', { sessionId, data: e.detail.text, seq: seqRef.current++ })
+      const text = e.detail?.text
+      if (socket && termRef.current && text) {
+        socket.emit('data', { sessionId, data: text, seq: seqRef.current++ })
       }
     }
     window.addEventListener('terminal-paste', handlePasteEvent)

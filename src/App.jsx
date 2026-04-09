@@ -121,21 +121,25 @@ export default function App() {
             tabStatuses={tabStatuses}
           />
         </div>
-         <div className="actions">
-           <NetworkStatus connected={connected} latency={latency} reconnectCount={reconnectCount} />
-           <button
-             className="icon-btn"
-             onClick={() => {
-               navigator.clipboard.readText().then(text => {
-                 // Emit paste event to active terminal
-                 const event = new CustomEvent('terminal-paste', { detail: { text } })
-                 window.dispatchEvent(event)
-               }).catch(err => console.error('Paste failed:', err))
-             }}
-             title="Paste from clipboard"
-           >
-             <Clipboard size={18} />
-           </button>
+           <div className="actions">
+            <NetworkStatus connected={connected} latency={latency} reconnectCount={reconnectCount} />
+            <button
+              className="icon-btn"
+              onClick={async () => {
+                try {
+                  const text = await navigator.clipboard.readText()
+                  if (text) {
+                    const event = new CustomEvent('terminal-paste', { detail: { text }, bubbles: true })
+                    window.dispatchEvent(event)
+                  }
+                } catch (err) {
+                  console.error('Paste failed:', err)
+                }
+              }}
+              title="Paste from clipboard"
+            >
+              <Clipboard size={18} />
+            </button>
            <button
              className="icon-btn"
              onClick={() => setSplitMode(v => !v)}
