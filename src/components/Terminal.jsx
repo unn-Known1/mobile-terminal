@@ -21,6 +21,8 @@ export default function Terminal({ sessionId, cwd = null, fontSize = 14, theme, 
   const seqRef = useRef(0)
   const [contextMenu, setContextMenu] = useState(null)
   const [isAtBottom, setIsAtBottom] = useState(true)
+  const [showScrollHint, setShowScrollHint] = useState(false)
+  const isAtBottomRef = useRef(true)
 
   // Initial terminal setup
   useEffect(() => {
@@ -95,14 +97,11 @@ export default function Terminal({ sessionId, cwd = null, fontSize = 14, theme, 
         const scrollEl = scrollContainerRef.current
         const { scrollTop, scrollHeight, clientHeight } = scrollEl
         const atBottom = scrollHeight - scrollTop - clientHeight < 50
+        isAtBottomRef.current = atBottom
         setIsAtBottom(atBottom)
         
         // Show scroll hint when scrolled up
-        if (scrollTop > 100) {
-          setShowScrollHint(true)
-        } else {
-          setShowScrollHint(false)
-        }
+        setShowScrollHint(scrollTop > 100)
       }
 
       const onResize = () => {
@@ -110,7 +109,7 @@ export default function Terminal({ sessionId, cwd = null, fontSize = 14, theme, 
           try { fitAddon.fit() } catch {}
           // Scroll to bottom after resize if we were at bottom
           setTimeout(() => {
-            if (isAtBottom) {
+            if (isAtBottomRef.current) {
               const terminal = containerRef.current?.querySelector('.xterm')
               if (terminal) terminal.scrollTop = terminal.scrollHeight
             }

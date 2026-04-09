@@ -88,7 +88,7 @@ export default function SettingsPanel({ isOpen, onClose, onFontSizeChange, onThe
   useEffect(() => {
     onFontSizeChange(initial.fontSize)
     onThemeChange(initial.theme)
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [initial.fontSize, initial.theme, onFontSizeChange, onThemeChange])
 
   const changeFontSize = (s) => {
     setFontSize(s)

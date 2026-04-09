@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import TabManager from './components/TabManager'
 import FileExplorer from './components/FileExplorer'
 import Terminal from './components/Terminal'
@@ -7,7 +7,7 @@ import SettingsPanel, { THEMES } from './components/SettingsPanel'
 import CodeEditor from './components/CodeEditor'
 import NetworkStatus from './components/NetworkStatus'
 import ErrorBoundary from './components/ErrorBoundary'
-import { Settings, PanelLeftClose, PanelLeftOpen, Split, Clipboard } from 'lucide-react'
+import { Settings, PanelLeftClose, PanelLeftOpen, Split, Clipboard, X } from 'lucide-react'
 import { useSocket } from './hooks/useSocket'
 
 function loadSession() {
@@ -31,16 +31,15 @@ function saveSession(tabs, activeTab, explorerOpen, currentPath) {
   } catch {}
 }
 
-function sendNotification(title, body) {
+async function sendNotification(title, body) {
   if (!('Notification' in window)) return
   if (Notification.permission === 'granted') {
     new Notification(title, { body })
   } else if (Notification.permission !== 'denied') {
-    Notification.requestPermission().then(permission => {
-      if (permission === 'granted') {
-        new Notification(title, { body })
-      }
-    })
+    const permission = await Notification.requestPermission()
+    if (permission === 'granted') {
+      new Notification(title, { body })
+    }
   }
 }
 
@@ -52,14 +51,23 @@ export default function App() {
   const [currentPath, setCurrentPath] = useState(initial.currentPath)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [splitMode, setSplitMode] = useState(false)
+  const [splitOrientation, setSplitOrientation] = useState('horizontal')
   const [fontSize, setFontSize] = useState(14)
   const [theme, setTheme] = useState('dark')
   const [tabStatuses, setTabStatuses] = useState({})
   const [editorFile, setEditorFile] = useState(null)
   const { connected, latency, reconnectCount } = useSocket('/')
+  const sessionSaveTimeout = useRef(null)
 
+  // Debounced session saving
   useEffect(() => {
-    saveSession(tabs, activeTab, explorerOpen, currentPath)
+    if (sessionSaveTimeout.current) clearTimeout(sessionSaveTimeout.current)
+    sessionSaveTimeout.current = setTimeout(() => {
+      saveSession(tabs, activeTab, explorerOpen, currentPath)
+    }, 500)
+    return () => {
+      if (sessionSaveTimeout.current) clearTimeout(sessionSaveTimeout.current)
+    }
   }, [tabs, activeTab, explorerOpen, currentPath])
 
   const updateTabStatus = (sessionId, status) => {
@@ -140,13 +148,32 @@ export default function App() {
             >
               <Clipboard size={18} />
             </button>
-           <button
-             className="icon-btn"
-             onClick={() => setSplitMode(v => !v)}
-             title={splitMode ? 'Single terminal' : 'Split view'}
-           >
-             <Split size={18} />
-           </button>
+           {splitMode ? (
+             <>
+               <button
+                 className="icon-btn"
+                 onClick={() => setSplitOrientation(o => o === 'horizontal' ? 'vertical' : 'horizontal')}
+                 title={`${splitOrientation === 'horizontal' ? 'Columns' : 'Rows'} view (Ctrl+\\)`}
+               >
+                 <Split size={18} className={splitOrientation === 'horizontal' ? '' : 'rotate-90'} />
+               </button>
+               <button
+                 className="icon-btn active"
+                 onClick={() => setSplitMode(false)}
+                 title="Exit split view"
+               >
+                 <X size={18} />
+               </button>
+             </>
+           ) : (
+             <button
+               className="icon-btn"
+               onClick={() => setSplitMode(true)}
+               title="Split view"
+             >
+               <Split size={18} />
+             </button>
+           )}
            <button
              className="icon-btn"
              onClick={() => setExplorerOpen(v => !v)}
@@ -177,21 +204,19 @@ export default function App() {
               theme={THEMES[theme]}
               tabStatuses={tabStatuses}
               onStatusChange={updateTabStatus}
+              orientation={splitOrientation}
+              onOrientationChange={setSplitOrientation}
             />
           ) : (
-            tabs.map(tab => (
-              <div
+            tabs.filter(tab => tab.id === activeTab).map(tab => (
+              <Terminal
                 key={tab.id}
-                style={{ display: tab.id === activeTab ? 'contents' : 'none' }}
-              >
-                <Terminal
-                  sessionId={tab.id}
-                  cwd={tab.cwd}
-                  fontSize={fontSize}
-                  theme={THEMES[theme]}
-                  onStatusChange={updateTabStatus}
-                />
-              </div>
+                sessionId={tab.id}
+                cwd={tab.cwd}
+                fontSize={fontSize}
+                theme={THEMES[theme]}
+                onStatusChange={updateTabStatus}
+              />
             ))
           )}
         </div>

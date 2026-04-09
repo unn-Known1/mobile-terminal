@@ -194,6 +194,15 @@ app.post('/api/tunnel/start', async (req, res) => {
     let fullOutput = ''
     const outputLines = []
     const MAX_LINES = 1000 // prevent memory issues
+    let urlSent = false // Track if URL was already sent to prevent race condition
+
+    // Cleanup function to clear all timers and intervals
+    const cleanup = () => {
+      if (errorCheckInterval) clearInterval(errorCheckInterval)
+      if (timeoutId) clearTimeout(timeoutId)
+      // Clear any pending setTimeout for URL
+      if (pendingTimeout) clearTimeout(pendingTimeout)
+    }
 
     const logOutput = (chunk, stream) => {
       const text = chunk.toString()
@@ -212,20 +221,29 @@ app.post('/api/tunnel/start', async (req, res) => {
       return match ? match[0].replace(/\/$/, '') : null
     }
 
+    // Pending timeout reference for cleanup
+    let pendingTimeout = null
+
+    // Send the URL response
+    const sendUrlResponse = (foundUrl) => {
+      if (urlSent || res.headersSent) return
+      urlSent = true
+      cleanup() // Clear all timers once URL is sent
+      console.log('[TUNNEL] Sending response to client')
+      tunnelUrl = foundUrl
+      res.json({ url: foundUrl, pin: tunnelPin })
+    }
+
     // On each data chunk, try to extract and send URL
     const maybeSendUrl = () => {
-      if (url || res.headersSent) return
+      if (urlSent || res.headersSent) return
       const foundUrl = extractUrl(fullOutput)
       if (foundUrl) {
         console.log('[TUNNEL] URL found in output:', foundUrl)
+        url = foundUrl
         // Wait 3 seconds for tunnel to establish before sending response
-        setTimeout(() => {
-          if (!res.headersSent) {
-            console.log('[TUNNEL] Sending response to client')
-            url = foundUrl
-            tunnelUrl = url
-            res.json({ url, pin: tunnelPin })
-          }
+        pendingTimeout = setTimeout(() => {
+          sendUrlResponse(foundUrl)
         }, 3000)
       }
     }
@@ -247,7 +265,7 @@ app.post('/api/tunnel/start', async (req, res) => {
     const errorKeywords = ['unauthorized', 'denied', 'permission', 'cannot create', 'exited with code']
     let possibleErrorLogged = false
     const checkForError = () => {
-      if (url || res.headersSent) return
+      if (urlSent || res.headersSent) return
       // Only fail if we've seen "Your quick Tunnel has been created!" message (indicating we should have URL)
       const hasCreatedMsg = outputLines.some(l => /quick Tunnel has been created/i.test(l))
       if (!hasCreatedMsg) return // still in progress
@@ -267,6 +285,7 @@ app.post('/api/tunnel/start', async (req, res) => {
 
     tunnelProcess.on('exit', (code) => {
       console.log('Tunnel process exited with code:', code)
+      cleanup() // Clear all timers on exit
       tunnelProcess = null
       // Clear tunnel state if this was the active tunnel
       if (tunnelActive) {
@@ -275,16 +294,17 @@ app.post('/api/tunnel/start', async (req, res) => {
         tunnelPin = null
         validTokens.clear()
       }
-      if (!url && !res.headersSent) {
+      if (!urlSent && !res.headersSent) {
         res.json({ error: 'Tunnel process exited unexpectedly (code ' + code + ')' })
       }
     })
 
     const timeoutMs = parseInt(process.env.TUNNEL_TIMEOUT) * 1000 || 90000
     const timeoutId = setTimeout(() => {
-      if (!url && !res.headersSent) {
+      if (!urlSent && !res.headersSent) {
         const lastLines = outputLines.slice(-10).join('\n')
         console.log('Tunnel start timeout. Full output captured:', outputLines.length, 'lines')
+        cleanup() // Clear error check interval
         res.json({ 
           error: `Timeout waiting for tunnel URL after ${timeoutMs/1000}s. Target: http://localhost:${targetPort}`,
           debug: { targetPort, lines: outputLines.length, lastLines }
@@ -292,15 +312,10 @@ app.post('/api/tunnel/start', async (req, res) => {
       }
     }, timeoutMs)
 
-    // Clear timeout when response is sent
-    const clearTimeoutIfNeeded = () => {
-      if (timeoutId) clearTimeout(timeoutId)
-    }
-    // We need to intercept res.json to clear timeout. But simpler: we can clear timeout after sending.
-    // We'll store original json method and wrap it.
+    // Wrap res.json to cleanup timers when response is sent
     const originalJson = res.json.bind(res)
     res.json = (body) => {
-      clearTimeout(timeoutId)
+      cleanup()
       return originalJson(body)
     }
 

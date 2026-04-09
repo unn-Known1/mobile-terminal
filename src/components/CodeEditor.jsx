@@ -1,6 +1,8 @@
-import { useState, useEffect } from 'react'
-import Editor from '@monaco-editor/react'
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react'
 import { X, Save, File } from 'lucide-react'
+
+// Lazy load Monaco Editor for better initial load performance
+const Editor = lazy(() => import('@monaco-editor/react'))
 
 const LANG_MAP = {
   js: 'javascript', jsx: 'javascript', ts: 'typescript', tsx: 'typescript',
@@ -34,7 +36,7 @@ export default function CodeEditor({ filePath, onClose }) {
       .catch(() => setLoading(false))
   }, [filePath])
 
-  const handleSave = async () => {
+  const handleSave = useCallback(async () => {
     if (!filePath) return
     setSaving(true)
     try {
@@ -46,7 +48,7 @@ export default function CodeEditor({ filePath, onClose }) {
       setModified(false)
     } catch (err) { alert(err.message) }
     setSaving(false)
-  }
+  }, [filePath, content])
 
   useEffect(() => {
     const handleKey = (e) => {
@@ -57,7 +59,7 @@ export default function CodeEditor({ filePath, onClose }) {
     }
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [content])
+  }, [handleSave])
 
   if (!filePath) return null
 
@@ -83,34 +85,38 @@ export default function CodeEditor({ filePath, onClose }) {
           {loading ? (
             <div className="editor-loading">Loading...</div>
           ) : (
-            <Editor
-              height="100%"
-              language={lang}
-              value={content}
-              onChange={(val) => { setContent(val); setModified(true); }}
-              theme="vs-dark"
-              onMount={(editor) => {
-                // Add id/name to Monaco's hidden textarea to satisfy autofill warnings
-                const container = editor.getDomNode()
-                if (container) {
-                  const textarea = container.querySelector('textarea')
-                  if (textarea && !textarea.id) {
-                    const safePath = filePath?.replace(/[^a-zA-Z0-9]/g, '-') || 'editor'
-                    const taId = `monaco-textarea-${safePath}`
-                    textarea.id = taId
-                    textarea.name = taId
+            <Suspense fallback={<div className="editor-loading">Loading editor...</div>}>
+              <Editor
+                height="100%"
+                language={lang}
+                value={content}
+                onChange={(val) => { setContent(val); setModified(true); }}
+                theme="vs-dark"
+                onMount={(editor) => {
+                  // Add id/name to Monaco's hidden textarea to satisfy autofill warnings
+                  const container = editor.getDomNode()
+                  if (container) {
+                    const textarea = container.querySelector('textarea')
+                    if (textarea && !textarea.id) {
+                      const safePath = filePath?.replace(/[^a-zA-Z0-9]/g, '-') || 'editor'
+                      const taId = `monaco-textarea-${safePath}`
+                      textarea.id = taId
+                      textarea.name = taId
+                    }
                   }
-                }
-              }}
-              options={{
-                minimap: { enabled: false },
-                fontSize: 14,
-                fontFamily: "'Fira Code', monospace",
-                lineNumbers: 'on',
-                wordWrap: 'on',
-                automaticLayout: true,
-              }}
-            />
+                }}
+                options={{
+                  minimap: { enabled: false },
+                  fontSize: 14,
+                  fontFamily: "'Fira Code', monospace",
+                  lineNumbers: 'on',
+                  wordWrap: 'on',
+                  // Removed automaticLayout for performance - use ResizeObserver instead
+                  scrollBeyondLastLine: false,
+                  smoothScrolling: true,
+                }}
+              />
+            </Suspense>
           )}
         </div>
       </div>

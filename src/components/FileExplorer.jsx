@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import {
   Folder, File, ChevronLeft, Terminal, RefreshCw, Eye, EyeOff,
   Copy, Scissors, Clipboard, FilePlus, Download, Trash2, Edit3, X, Check, Star, Upload
@@ -265,17 +265,17 @@ export default function FileExplorer({ isOpen, currentPath, onNavigate, onOpenTe
       } catch (err) { alert(err.message) }
     } else if (modal.type === 'multi-rename' && modal.items) {
       try {
-        for (let i = 0; i < modal.items.length; i++) {
-          const item = modal.items[i]
+        const renamePromises = modal.items.map((item, i) => {
           const ext = item.name.includes('.') ? '.' + item.name.split('.').pop() : ''
           const base = ext ? item.name.replace(ext, '') : item.name
           const newName = `${base}-${i + 1}${ext}`
-          await fetch('/api/file/rename', {
+          return fetch('/api/file/rename', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ oldPath: item.path, newName })
           })
-        }
+        })
+        await Promise.all(renamePromises)
         setModal({ type: null, item: null })
         clearSelection()
         fetchDirectory(currentPath)
@@ -283,7 +283,9 @@ export default function FileExplorer({ isOpen, currentPath, onNavigate, onOpenTe
     }
   }
 
-  const visibleItems = showHidden ? items : items.filter(i => !i.name.startsWith('.'))
+  const visibleItems = useMemo(() => {
+    return showHidden ? items : items.filter(i => !i.name.startsWith('.'))
+  }, [items, showHidden])
 
   if (!isOpen) return null
 

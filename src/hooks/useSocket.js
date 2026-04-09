@@ -57,45 +57,38 @@ export function useSocket(url) {
   const [latency, setLatency] = useState(0)
   const [reconnectCount, setReconnectCount] = useState(0)
   const [reconnectAttempts, setReconnectAttempts] = useState(0)
-  const socketRef = useRef(null)
+
+  // Get socket synchronously - it exists immediately if singleton, or is created
+  const socket = getSharedSocket(url)
 
   useEffect(() => {
-    const socket = getSharedSocket(url)
-    socketRef.current = socket
     _refCount++
 
-    // Sync global state to local state periodically
+    // Sync global state to local state periodically (reduced frequency)
     const syncInterval = setInterval(() => {
       setLatency(_latency)
       setReconnectCount(_reconnectCount)
       setReconnectAttempts(_reconnectAttempts)
-    }, 500)
+    }, 1000)
 
-    const onConnect = () => {
-      setConnected(true)
-    }
-    const onDisconnect = () => {
-      setConnected(false)
-    }
+    const onConnect = () => setConnected(true)
+    const onDisconnect = () => setConnected(false)
 
     socket.on('connect', onConnect)
     socket.on('disconnect', onDisconnect)
 
     // Set initial connection state
-    if (socket.connected) {
-      setConnected(true)
-    }
+    if (socket.connected) setConnected(true)
 
     return () => {
       clearInterval(syncInterval)
       socket.off('connect', onConnect)
       socket.off('disconnect', onDisconnect)
       _refCount--
-      // Note: We keep the socket alive as a singleton for all components
     }
-  }, [url])
+  }, [url, socket])
 
-  return { socket: socketRef.current, connected, latency, reconnectCount, reconnectAttempts }
+  return { socket, connected, latency, reconnectCount, reconnectAttempts }
 }
 
 // Utility hook for socket operations
