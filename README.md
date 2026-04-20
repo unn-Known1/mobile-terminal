@@ -19,7 +19,7 @@ A full-featured, production-grade terminal accessible from any browser. Built wi
 Deploy your terminal with a single command and access it from anywhere:
 
 ```bash
-curl -sL https://raw.githubusercontent.com/unn-Known1/mobile-terminal/main/install.sh | bash
+curl -sL https://raw.githubusercontent.com/unn-Known1/mobile-terminal/master/install.sh | bash
 ```
 
 **What happens:**
@@ -68,7 +68,7 @@ npm run build
 ### One-Command Install (Recommended)
 
 ```bash
-curl -sL https://raw.githubusercontent.com/unn-Known1/mobile-terminal/main/install.sh | bash
+curl -sL https://raw.githubusercontent.com/unn-Known1/mobile-terminal/master/install.sh | bash
 ```
 
 ### Manual Installation

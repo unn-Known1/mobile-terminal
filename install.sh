@@ -1,6 +1,6 @@
 #!/bin/bash
 # Mobile Terminal - One-Command Installer
-# Usage: curl -sL https://raw.githubusercontent.com/unn-Known1/mobile-terminal/main/install.sh | bash
+# Usage: curl -sL https://raw.githubusercontent.com/unn-Known1/mobile-terminal/master/install.sh | bash
 # Or: curl -sL https://git.new/term | bash
 
 set -e
