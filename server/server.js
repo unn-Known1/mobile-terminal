@@ -283,7 +283,13 @@ app.post('/api/tunnel/start', async (req, res) => {
         // Likely an error after promising start – capture last few lines
         const recent = outputLines.slice(-3).join('\n').trim()
         console.log('Potential tunnel error after creation message:', recent)
-        // Don't immediately respond; might still succeed. Just log.
+        // Log error with structured data for debugging - helps identify silent failures
+        console.warn(JSON.stringify({
+          type: 'TUNNEL_ERROR_DETECTED',
+          keyword: found,
+          recentOutput: recent,
+          timestamp: new Date().toISOString()
+        }));
       }
     }
     // check for errors every 3 seconds
